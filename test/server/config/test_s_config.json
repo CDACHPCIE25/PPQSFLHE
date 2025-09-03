@@ -1,0 +1,19 @@
+{
+  "test_s_CC": {
+    "ConfigFile": "server/config/config_cc.json",
+    "GenCCBin": "server/build/genCC",
+    "CCFile": "server/storage/CC.json"
+  },
+  "test_s_runMserver": {
+    "sConfigFile": "server/config/sConfig.json",
+    "runMserverBin": "server/build/runMserver"
+  },
+  "test_s_changeCipherDomain": {
+    "sConfigFile": "server/config/sConfig.json",
+    "changeCipherDomainBin": "server/build/changeCipherDomain"
+  },
+  "test_s_aggregateEncryptedWeights": {
+    "sConfigFile": "server/config/sConfig.json",
+    "aggregateEncryptedWeightsBin": "server/build/aggregateEncryptedWeights"
+  }
+}

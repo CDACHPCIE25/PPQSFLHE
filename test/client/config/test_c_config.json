@@ -1,0 +1,26 @@
+{
+  "test_c_keyGen": {
+    "ConfigFile_Client1": "client/config/client_1/c_config.json",
+    "ConfigFile_Client2": "client/config/client_2/c_config.json",
+    "KeyGenBin": "client/build/keyGen"
+   },
+  "test_c_REkeyGen": {
+    "ConfigFile_Client1": "client/config/client_1/c_config.json",
+    "ConfigFile_Client2": "client/config/client_2/c_config.json",
+    "REkeyGenBin": "client/build/REkeyGen"
+   },
+  "test_c_encryptModelWeights": {
+    "EncryptBin": "client/build/encryptModelWeights",
+    "CryptoContext": "server/storage/CC.json",
+    "PubKey": "client/storage/client_1/public/client_1-public.key",
+    "InputWeights": "client/storage/client_1/private/sample_weights_c1.json",
+    "OUTPUT_ENCRYPTED_WEIGHTS_PATH": "/home/hpcie/Desktop/PPFL/client/storage/client_1/private/encrypted_weights_c1.json"
+  },
+  "test_c_decryptModelWeights": {
+    "DecryptBin": "client/build/decryptModelWeights",
+    "CryptoContext": "client/storage/client_2/public/CC.json",
+    "PrivKey": "client/storage/client_2/private/client_2-private.key",
+    "InputEncryptedWeights": "client/storage/client_2/private/encrypted_weights_c2.json",
+    "OutputDecryptedWeights": "client/storage/client_2/private/decrypted_weights_c2.json"
+  }
+}

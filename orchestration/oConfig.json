@@ -1,0 +1,16 @@
+{
+  "orchestration": {
+    "SERVER_IP": "127.0.0.1",
+    "SERVER_PORT": 8000,
+    "COMM_MODE": "MONGOOSE",
+    "ROUNDS": 2
+  },
+  "client1": {
+    "private_path": "client/storage/client_1/private",
+    "public_path": "client/storage/client_1/public"
+  },
+  "client2": {
+    "private_path": "client/storage/client_2/private",
+    "public_path": "client/storage/client_2/public"
+  }
+}

@@ -1,0 +1,6 @@
+{
+    "MultiplicativeDepth": 2,
+    "ScalingModSize": 40,
+    "BatchSize": 8192,
+    "PREMode": "INDCPA"
+}

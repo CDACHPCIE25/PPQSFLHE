@@ -1,0 +1,18 @@
+{
+  "mSConfig": {
+    "SERVER_IP": "0.0.0.0",
+    "SERVER_PORT": 8000
+  },
+  "CC": {
+    "path": "server/storage/CC.json"
+  },
+  "CLIENTS": {
+    "CLIENT_1_REKEY": "server/storage/client_1/client_1-ReKey.key",
+    "CLIENT_2_REKEY": "server/storage/client_2/client_2-ReKey.key",
+    "CLIENT_1_ENCRYPTED_WEIGHTS_PATH": "server/storage/client_1/encrypted_weights_c1.json",
+    "CLIENT_2_ENCRYPTED_WEIGHTS_PATH": "server/storage/client_2/encrypted_weights_c2.json",
+    "OUTPUT_DOMAIN_CHANGED_PATH": "server/storage/client_2/c1_domainChange_c2.json",
+    "AGGREGATED_ENCRYPTED_WEIGHTS_PATH": "server/storage/client_2/aggregated_weights.json",
+    "OUTPUT_AGGREGATED_DOMAIN_CHANGED_PATH": "server/storage/client_1/c2_domainChange_c1.json"
+  }
+}

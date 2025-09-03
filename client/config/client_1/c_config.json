@@ -1,0 +1,24 @@
+{
+  "CLIENT": {
+    "CC_PATH": "client/storage/client_1/public/CC.json",
+    "PUBKEY_PATH": "client/storage/client_1/public/client_1-public.key",
+    "PRIVKEY_PATH": "client/storage/client_1/private/client_1-private.key",
+    "PEER_PUBKEY_PATH": "client/storage/client_1/public/client_2-public.key",
+    "REKEY_PATH": "client/storage/client_1/public/client_1-ReKey.key",
+    "INPUT_WEIGHTS_PATH": "client/storage/client_1/private/sample_weights_c1.json",
+    "OUTPUT_ENCRYPTED_WEIGHTS_PATH": "client/storage/client_1/private/encrypted_weights_c1.json",
+    "AGGREGATED_ENCRYPTED_WEIGHTS_PATH": "client/storage/client_1/private/c2_domainChange_c1.json",
+    "OUTPUT_DECRYPTED_WEIGHTS_PATH": "client/storage/client_1/private/decrypted_weights_c1.json",
+    "client_id": "client_1",
+    "data_file": "client/storage/client_1/private/client1_training_data.csv",
+    "output_file": "client/storage/client_1/private/client1_forecast.csv",
+    "log_dir": "client/storage/client_1/private/logs",
+    "model_file": "client/storage/client_1/private/client1_gruModel.keras",
+    "train_end_date": "2024-07-24 23:00:00",
+    "test_start_date": "2024-07-25 00:00:00",
+    "forecast_start_date": "2024-08-01 00:00:00",
+    "forecast_end_date": "2024-08-31 23:00:00",
+    "lookback": 72,
+    "n_features": 6
+  }
+}
