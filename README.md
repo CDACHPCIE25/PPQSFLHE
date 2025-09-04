@@ -4,7 +4,7 @@
 
 ## Overview 
 
-Modern data centers and distributed environments generate massive amounts of telemetry data, including IT energy usage, non-IT load, UPS statistics, and building management system (BMS) readings. Sharing this raw data across centers is risky due to privacy and regulatory constraints. 
+Large-scale systems and distributed environments produce vast amounts of data from various sources such as devices, applications, and monitoring components. Directly sharing this raw information across different locations raises significant privacy, security, and regulatory challenges, making conventional centralized data processing or machine learning approaches less suitable. To address these challenges, this project integrates Federated Learning (FL), Homomorphic Encryption (HE), and High-Performance Computing (HPC) into a unified framework.
 
 
 This project implements a **Privacy Preserving Quantum Secure Federated Learning Framework based on Multikey CKKS Homomorphic Encryption** that leverages:  
