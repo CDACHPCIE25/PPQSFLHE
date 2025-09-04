@@ -112,6 +112,6 @@ This structure ensures clear separation between client data, server aggregation,
 ## Authors & Acknowledgements
 - Developed at **C-DAC Pune**  
 - Contributors: *Pranali Nikam*,*Prabhat Karlekar*, *Siddhant Bopche* , *Dr. Puneet Bakshi*, *Mr. Vinodh Kumar M*
-- Acknowledgements: **OpenFHE, TensorFlow, Apache Kafka, HPC resources at CDAC Pune**  
+- Acknowledgements: **HPC resources at CDAC Pune**  
 
 
