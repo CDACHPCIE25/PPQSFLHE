@@ -14,7 +14,7 @@ from tensorflow.keras import backend as K
 # -----------------------------
 # Config
 # -----------------------------
-CLIENT_CONFIG = "/home/hpcie/Desktop/PPFL/client/config/client_1/c_config.json"
+CLIENT_CONFIG = "../../../config/client_1/c_config.json"
 LOOKBACK = 72
 N_FEATURES = 6  # DayOfYear, Month, DayOfWeek, WeekOfYear, AcademicMonth, HourOfDay
 TARGET = "Data"
@@ -93,7 +93,9 @@ def main():
     fs.fit(train_df[feature_names].values)
     ts.fit(train_df[[TARGET]].values)
 
-    # Prepare test sequences
+    # Prepare train/test sequences
+    X_train, y_train = prepare_sequences(train_df, LOOKBACK, feature_names, TARGET, fs, ts)
+    y_train_true = ts.inverse_transform(y_train.reshape(-1, 1)).flatten()
     X_test, y_test = prepare_sequences(test_df, LOOKBACK, feature_names, TARGET, fs, ts)
     y_test_true = ts.inverse_transform(y_test.reshape(-1, 1)).flatten()
 
@@ -109,64 +111,71 @@ def main():
 
     for round_idx, model_path in enumerate(round_models, start=1):
         model = load_model(model_path)
-        preds_scaled = model.predict(X_test, verbose=0).flatten()
-        preds = ts.inverse_transform(preds_scaled.reshape(-1, 1)).flatten()
 
-        # Save round predictions
+        # Train predictions
+        preds_train_scaled = model.predict(X_train, verbose=0).flatten()
+        preds_train = ts.inverse_transform(preds_train_scaled.reshape(-1, 1)).flatten()
+        train_metrics = calculate_metrics(y_train_true, preds_train, np.mean(y_train_true))
+
+        # Test predictions
+        preds_test_scaled = model.predict(X_test, verbose=0).flatten()
+        preds_test = ts.inverse_transform(preds_test_scaled.reshape(-1, 1)).flatten()
+        test_metrics = calculate_metrics(y_test_true, preds_test, np.mean(y_test_true))
+
+        # Save round predictions (test side only, like before)
         results_dir_path = os.path.join(os.path.dirname(__file__), RESULTS_DIR)
         out_csv = os.path.join(results_dir_path, f"{client_id}_round{round_idx}_predictions_{timestamp}.csv")
         pred_df = pd.DataFrame({
             "Timestamp": test_df["Timestamp"][LOOKBACK:].values,
             "True": y_test_true,
-            "Pred": preds
+            "Pred": preds_test
         })
         pred_df.to_csv(out_csv, index=False)
         print(f"Round {round_idx} predictions saved to: {out_csv}")
 
-        # Calculate and save metrics
-        metrics = calculate_metrics(y_test_true, preds, np.mean(y_test_true))
-        metrics["Round"] = round_idx
+        # Merge metrics
+        metrics = {"Round": round_idx}
+        metrics.update({f"train_{k}": v for k, v in train_metrics.items()})
+        metrics.update({f"test_{k}": v for k, v in test_metrics.items()})
         metrics_per_round.append(metrics)
-        print(f"Round {round_idx} Metrics: {metrics}")
+        print(f"Round {round_idx} Train Metrics: {train_metrics}")
+        print(f"Round {round_idx} Test Metrics: {test_metrics}")
 
     # Save metrics CSV
     metrics_df = pd.DataFrame(metrics_per_round)
+    results_dir_path = os.path.join(os.path.dirname(__file__), RESULTS_DIR)
     metrics_csv = os.path.join(results_dir_path, f"{client_id}_metrics_rounds_{timestamp}.csv")
     metrics_df.to_csv(metrics_csv, index=False)
     print(f"Metrics saved to: {metrics_csv}")
 
-    results_dir_path = os.path.join(os.path.dirname(__file__), RESULTS_DIR)
-    
-    # Look for existing metrics CSV
-    metrics_files = sorted(glob.glob(os.path.join(results_dir_path, f"{client_id}_metrics_rounds_*.csv")))
-    
-    if metrics_files:
-        print("Found metrics CSV, using last one for plotting...")
-        metrics_csv = metrics_files[-1]
-        metrics_df = pd.read_csv(metrics_csv)
-    else:
-        print("No metrics CSV found. Please run round evaluations first.")
-        return
-    
-    # --- Plot metrics cleanly ---
+    # --- Plot metrics cleanly (train vs test) ---
     plt.figure(figsize=(10, 6))
     for metric in ["MAE", "RMSE", "R2", "MAPE", "PMAE"]:
-        plt.plot(metrics_df["Round"], metrics_df[metric], marker="o", label=metric)
+        plt.plot(metrics_df["Round"], metrics_df[f"train_{metric}"], marker="o", label=f"Train {metric}")
+        plt.plot(metrics_df["Round"], metrics_df[f"test_{metric}"], marker="x", linestyle="--", label=f"Test {metric}")
 
     plt.xlabel("Round")
     plt.ylabel("Metric Value")
-    plt.title(f"{client_id} Round-wise Metrics")
-    plt.legend()
+    plt.title(f"{client_id} Round-wise Train vs Test Metrics")
     plt.grid(True)
-    plt.xticks(metrics_df["Round"])  # Force integer ticks
+    plt.xticks(metrics_df["Round"])
+
+    # make y-axis consistent across clients
+    ymin = metrics_df[[c for c in metrics_df.columns if c != "Round"]].min().min()
+    ymax = metrics_df[[c for c in metrics_df.columns if c != "Round"]].max().max()
+    plt.ylim(ymin * 1.1, ymax * 1.1)
+
+    # put legend outside
+    plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left", borderaxespad=0.)
+    plt.tight_layout()
+
     plot_path = os.path.join(results_dir_path, f"{client_id}_round_metrics_{timestamp}.png")
-    plt.savefig(plot_path, dpi=300)
+    plt.savefig(plot_path, dpi=300, bbox_inches="tight")
     plt.close()
     print(f"Metrics plot saved to: {plot_path}")
-    
-    # --- Plot predictions per round ---
+
+    # --- Plot predictions per round (test only) ---
     pred_files = sorted(glob.glob(os.path.join(results_dir_path, f"{client_id}_round*_predictions_*.csv")))
-    
     if not pred_files:
         print("No prediction CSVs found. Skipping prediction plots.")
     else:
@@ -179,27 +188,25 @@ def main():
             plt.plot(pred_df["Timestamp"], pred_df["True"], label="True", linewidth=2)
             plt.plot(pred_df["Timestamp"], pred_df["Pred"], label="Pred", linewidth=2, linestyle="--")
             
-            # ? Format x-axis to daily ticks (avoid overcrowding)
             ax = plt.gca()
             ax.xaxis.set_major_locator(mdates.DayLocator(interval=2))  # every 2nd day
             ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
-            plt.gcf().autofmt_xdate()  # rotate dates
-            
+            plt.gcf().autofmt_xdate()
+
             plt.xlabel("Time")
             plt.ylabel("Value")
             plt.title(f"{client_id} Round {round_num} Predictions (Day-wise)")
-            plt.legend()
+            plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left", borderaxespad=0.)
+            plt.tight_layout()
             plt.grid(True)
 
-            pred_plot_path = os.path.join(
-                results_dir_path,
-                f"{client_id}_round{round_num}_predictions_{timestamp}.png"
-            )
+            pred_plot_path = os.path.join(results_dir_path, f"{client_id}_round{round_num}_predictions_{timestamp}.png")
             plt.savefig(pred_plot_path, dpi=300)
             plt.close()
             print(f"Prediction plot saved to: {pred_plot_path}")
 
     K.clear_session()
+
 
 if __name__ == "__main__":
     main()

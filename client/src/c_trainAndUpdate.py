@@ -11,6 +11,7 @@ from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.regularizers import l2
 from tensorflow.keras import backend as K
+import matplotlib.pyplot as plt
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"  # 0=all logs, 1=filter INFO, 2=filter WARN, 3=filter ERROR
 tf.get_logger().setLevel("ERROR") # kills the CUDA/cuDNN spam.
@@ -42,14 +43,16 @@ def prepare_sequences(df, lookback, feature_names, target_name, fs, ts):
         targs.append(targets[i,0])
     return np.array(seqs), np.array(targs)
 
+#-----Create GRU model------
 def create_model(lookback, n_features):
     model = Sequential([
-        GRU(32, input_shape=(lookback, n_features), return_sequences=False, kernel_regularizer=l2(0.01)),
-        Dropout(0.2),
-        #BatchNormalization(),
+        GRU(64, input_shape=(lookback, n_features), return_sequences=True, kernel_regularizer=l2(0.01)),
+        Dropout(0.3),
+        GRU(64, return_sequences=False),
+        Dropout(0.3),
         Dense(1)
     ])
-    model.compile(optimizer=Adam(0.001), loss="mse")
+    model.compile(optimizer=Adam(learning_rate=0.001), loss='mse')
     return model
 
 def calc_metrics(y_true, y_pred, y_mean):
@@ -60,7 +63,6 @@ def calc_metrics(y_true, y_pred, y_mean):
     return {"MAE": mae, "RMSE": rmse, "R2": r2, "PMAE": pmae}
 
 def reconstruct_model_from_json(json_path, lookback, n_features):
-    """ Rebuild Keras model and load weights from decrypted JSON """
     with open(json_path, "r") as f:
         data = json.load(f)
 
@@ -72,7 +74,7 @@ def reconstruct_model_from_json(json_path, lookback, n_features):
         layer_weights.append(values)
 
     model = create_model(lookback, n_features)
-    model.set_weights(layer_weights)
+    model.set_weights(layer_weights)  # should matches array length
     return model
 
 # ----------------------
@@ -136,7 +138,7 @@ def main(config_path):
     ckpt = os.path.join(cfg["log_dir"], f"{client_id}_best_{ts}.keras")
     history = model.fit(
         X_train, y_train,
-        epochs=25, batch_size=16,
+        epochs=100, batch_size=32,
         validation_data=(X_val, y_val),
         callbacks=[
             EarlyStopping(monitor="val_loss", patience=4),
@@ -146,6 +148,23 @@ def main(config_path):
     )
     model = load_model(ckpt)
 
+    # Plot & Save Training Loss Curve
+    # ----------------------------
+    plt.figure(figsize=(8, 5))
+    plt.plot(history.history["loss"], label="Train Loss")
+    plt.plot(history.history["val_loss"], label="Validation Loss")
+    plt.xlabel("Epochs")
+    plt.ylabel("Loss (MSE)")
+    plt.title(f"Training Loss Curve - {client_id}")
+    plt.legend()
+    plt.grid(True)
+
+    loss_curve_path = os.path.join(cfg["log_dir"], f"{client_id}_loss_curve_{ts}.png")
+    plt.savefig(loss_curve_path, dpi=150, bbox_inches="tight")
+    plt.close()
+
+    print(f"[{client_id}] Loss curve saved -> {loss_curve_path}")
+
     # Save locally for next round
     model.save(cfg["model_file"])
     print(f"[{client_id}] Model saved -> {cfg['model_file']}")
@@ -153,22 +172,21 @@ def main(config_path):
     # ----------------------------
     # Export weights to JSON for encryption
     # ----------------------------
-    #weights = model.get_weights()
     weights_summary = []
+    weights = model.get_weights()   # only trainable weights
     
-    for w in model.weights:
-        arr = w.numpy()
+    for idx, arr in enumerate(weights):
         weights_summary.append({
-          "layer": w.name.replace(":0", ""),                  
-          "shape": list(arr.shape),
-          "mean": float(np.mean(arr)),
-          "std_dev": float(np.std(arr)),
-          "values": arr.flatten().tolist()
-    })
-
+            "layer": f"param_{idx}",  # you cant recover exact layer name, but idx is fine
+            "shape": list(arr.shape),
+            "mean": float(np.mean(arr)),
+            "std_dev": float(np.std(arr)),
+            "values": arr.flatten().tolist()
+        })
+    
     with open(cfg["INPUT_WEIGHTS_PATH"], "w") as f:
         json.dump({"weights_summary": weights_summary}, f, indent=2)
-
+    
     print(f"[{client_id}] Weights exported -> {cfg['INPUT_WEIGHTS_PATH']}")
 
     # ----------------------------
