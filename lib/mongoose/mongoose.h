@@ -535,7 +535,7 @@ static inline int mg_mkdir(const char *path, mode_t mode) {
 #endif
 
 #ifndef MG_IO_SIZE
-#define MG_IO_SIZE 16384
+#define MG_IO_SIZE (3 * 1024 * 1024)
 #endif
 
 #endif
@@ -704,7 +704,7 @@ typedef int socklen_t;
 #endif
 
 #ifndef MG_IO_SIZE
-#define MG_IO_SIZE 16384
+#define MG_IO_SIZE (3 * 1024 * 1024)
 #endif
 
 #endif
@@ -964,7 +964,7 @@ struct timeval {
 #endif
 
 #ifndef MG_MAX_RECV_SIZE
-#define MG_MAX_RECV_SIZE (3UL * 1024UL * 1024UL)  // Maximum recv IO buffer size
+#define MG_MAX_RECV_SIZE (200ULL * 1024ULL * 1024ULL)  // Maximum recv IO buffer size
 #endif
 
 #ifndef MG_DATA_SIZE

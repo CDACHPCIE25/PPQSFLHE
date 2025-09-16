@@ -5,31 +5,45 @@
 
 # msend: thin wrapper around curl for GET/POST used by comm layer
 msend() {
-    local method=$1
-    local url=$2
-    local output=$3
-    local client_id=$4
-    local type=$5
-    local file=$6
+    local method=$1     # GET or POST
+    local url=$2        # full URL (http://ip:port/endpoint)
+    local output=$3     # destination file (for GET response or POST ack)
+    local client_id=$4  # client id (optional, used in POST)
+    local type=$5       # type of upload (pubkey, rekey, weights, etc.)
+    local file=$6       # file path to send in POST
 
     if [ "$method" = "GET" ]; then
         echo "[helper_fns.sh] GET -> $url"
-        curl -f -s -S -o "$output" "$url"
+        for i in {1..5}; do
+            curl -f -s -S -o "$output" "$url" && break
+            echo "[helper_fns.sh] WARN: GET failed (attempt $i), retrying..."
+            sleep 1
+        done
+
     elif [ "$method" = "POST" ]; then
+        if [ -z "$file" ] || [ ! -f "$file" ]; then
+            echo "[helper_fns.sh] ERROR: File to upload missing: $file"
+            return 1
+        fi
         echo "[helper_fns.sh] POST -> $url (client_id=$client_id, type=$type, file=$file)"
-        curl -f -s -S -X POST "$url?client_id=$client_id&type=$type" -F "file=@$file" -o "$output"
+
+        curl -s -X POST "$url" \
+             -F "file=@${file}" \
+             -F "client_id=${client_id}" \
+             -F "type=${type}" \
+             -o "$output"
+        if [ $? -ne 0 ]; then
+            echo "[helper_fns.sh] ERROR: curl POST failed ($url)"
+            return 1
+        fi
+
     else
         echo "[helper_fns.sh] ERROR: Invalid msend method: $method"
         return 1
     fi
 
-    # Check curl exit code
-    if [ $? -ne 0 ]; then
-        echo "[helper_fns.sh] ERROR: curl request failed ($method $url)"
-        return 1
-    fi
-
     echo "[helper_fns.sh] SUCCESS: $method completed"
+    return 0
 }
 
 

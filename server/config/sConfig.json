@@ -7,6 +7,8 @@
     "path": "server/storage/CC.json"
   },
   "CLIENTS": {
+    "CLIENT_1_PUBLIC": "server/storage/client_1/client_1-public.key",
+    "CLIENT_2_PUBLIC": "server/storage/client_2/client_2-public.key",
     "CLIENT_1_REKEY": "server/storage/client_1/client_1-ReKey.key",
     "CLIENT_2_REKEY": "server/storage/client_2/client_2-ReKey.key",
     "CLIENT_1_ENCRYPTED_WEIGHTS_PATH": "server/storage/client_1/encrypted_weights_c1.json",
