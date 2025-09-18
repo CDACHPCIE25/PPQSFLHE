@@ -1,0 +1,27 @@
+timestamp,role,method,endpoint,client_id,type,file,payload_size,bytes_sent,bytes_received,latency_ms,http_code
+18-09-2025 17:12,server,POST,/uploadPubKeyC1,1,pubkey,server/storage/client_1/client_1-public.key,12622786,0,12622786,44,200
+18-09-2025 17:12,server,POST,/uploadPubKeyC2,2,pubkey,server/storage/client_2/client_2-public.key,12622719,0,12622719,36,200
+18-09-2025 17:12,server,GET,/download/client_1/client_1-public.key,-,-,server/storage/client_1/client_1-public.key,12622786,12622786,0,167,200
+18-09-2025 17:12,server,GET,/download/client_2/client_2-public.key,-,-,server/storage/client_2/client_2-public.key,12622719,12622719,0,137,200
+18-09-2025 17:12,server,POST,/uploadReKeyC1,1,rekey,server/storage/client_1/client_1-ReKey.key,26799207,0,26799207,57,200
+18-09-2025 17:12,server,POST,/uploadReKeyC2,2,rekey,server/storage/client_2/client_2-ReKey.key,26799584,0,26799584,59,200
+18-09-2025 17:14,server,POST,/uploadEncWeightsC1,1,weights,server/storage/client_1/encrypted_weights_c1.json,37806011,0,37806011,83,200
+18-09-2025 17:14,server,POST,/uploadEncWeightsC2,2,weights,server/storage/client_2/encrypted_weights_c2.json,37806011,0,37806011,75,200
+18-09-2025 17:14,server,GET,/download/client_1/c2_domainChange_c1.json,-,-,server/storage/client_1/c2_domainChange_c1.json,28368755,28368755,0,424,200
+18-09-2025 17:14,server,GET,/download/client_2/aggregated_weights.json,-,-,server/storage/client_2/aggregated_weights.json,28368755,28368755,0,311,200
+18-09-2025 17:16,server,POST,/uploadEncWeightsC1,1,weights,server/storage/client_1/encrypted_weights_c1.json,37806011,0,37806011,247,200
+18-09-2025 17:16,server,POST,/uploadEncWeightsC2,2,weights,server/storage/client_2/encrypted_weights_c2.json,37806011,0,37806011,346,200
+18-09-2025 17:16,server,GET,/download/client_1/c2_domainChange_c1.json,-,-,server/storage/client_1/c2_domainChange_c1.json,28368755,28368755,0,450,200
+18-09-2025 17:16,server,GET,/download/client_2/aggregated_weights.json,-,-,server/storage/client_2/aggregated_weights.json,28368755,28368755,0,464,200
+18-09-2025 17:17,server,POST,/uploadEncWeightsC1,1,weights,server/storage/client_1/encrypted_weights_c1.json,37806011,0,37806011,203,200
+18-09-2025 17:17,server,POST,/uploadEncWeightsC2,2,weights,server/storage/client_2/encrypted_weights_c2.json,37806011,0,37806011,211,200
+18-09-2025 17:17,server,GET,/download/client_1/c2_domainChange_c1.json,-,-,server/storage/client_1/c2_domainChange_c1.json,28368755,28368755,0,413,200
+18-09-2025 17:17,server,GET,/download/client_2/aggregated_weights.json,-,-,server/storage/client_2/aggregated_weights.json,28368755,28368755,0,447,200
+18-09-2025 17:19,server,POST,/uploadEncWeightsC1,1,weights,server/storage/client_1/encrypted_weights_c1.json,37806011,0,37806011,310,200
+18-09-2025 17:19,server,POST,/uploadEncWeightsC2,2,weights,server/storage/client_2/encrypted_weights_c2.json,37806011,0,37806011,227,200
+18-09-2025 17:19,server,GET,/download/client_1/c2_domainChange_c1.json,-,-,server/storage/client_1/c2_domainChange_c1.json,28368755,28368755,0,369,200
+18-09-2025 17:19,server,GET,/download/client_2/aggregated_weights.json,-,-,server/storage/client_2/aggregated_weights.json,28368755,28368755,0,442,200
+18-09-2025 17:20,server,POST,/uploadEncWeightsC1,1,weights,server/storage/client_1/encrypted_weights_c1.json,37806011,0,37806011,312,200
+18-09-2025 17:20,server,POST,/uploadEncWeightsC2,2,weights,server/storage/client_2/encrypted_weights_c2.json,37806011,0,37806011,354,200
+18-09-2025 17:21,server,GET,/download/client_1/c2_domainChange_c1.json,-,-,server/storage/client_1/c2_domainChange_c1.json,28368755,28368755,0,331,200
+18-09-2025 17:21,server,GET,/download/client_2/aggregated_weights.json,-,-,server/storage/client_2/aggregated_weights.json,28368755,28368755,0,411,200
