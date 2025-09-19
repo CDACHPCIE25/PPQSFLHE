@@ -78,7 +78,6 @@ To run the project, you’ll need:
 
 For full step-by-step installation, see [Installation Guide](documentation/Installation_and_Dependencies_Guide_PPQSFL.docx).
 
-
 This structure ensures clear separation between client data, server aggregation, and orchestration logs for reproducibility.
 
 ---
@@ -111,6 +110,19 @@ This structure ensures clear separation between client data, server aggregation,
 
 ## Project Walkthrough Videos
 - **see the [Video Resources Folder]** – https://1drv.ms/f/c/e0ca0a8fe3e07c60/EgcFwh0YsiVKsN3vtobRircBz514uRZGRY-EUMFO_x5fsg?e=9bDkut 
+
+---
+
+## Dependencies and Libraries  
+
+This project makes use of the following open-source libraries:  
+
+- [OpenFHE](https://github.com/openfheorg/openfhe-development) – Homomorphic encryption primitives (CKKS, PRE).  
+- [Mongoose](https://github.com/Automattic/mongoose) – Lightweight embedded web server (using `mongoose.c` and `mongoose.h`).  
+- [cereal](https://github.com/USCiLab/cereal) – C++11 serialization library.  
+- [nlohmann/json](https://github.com/nlohmann/json) – JSON parsing and serialization for modern C++.  
+
+We gratefully acknowledge the authors and contributors of these projects.
 
 ---
 
