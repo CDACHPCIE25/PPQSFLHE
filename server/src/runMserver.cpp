@@ -13,6 +13,40 @@
 #include <sstream>
 #include <nlohmann/json.hpp>
 #include <filesystem>
+#include <chrono>    // For server-side comm metrics
+#include <iomanip>   // For server-side comm metrics
+
+//===========Server-side metrics============
+std::string server_metrics_file = "orchestration/metrics/server_comm_metrics.csv";    // For server-side comm metrics 
+
+void init_server_metrics() {
+    namespace fs = std::filesystem;
+    fs::create_directories("orchestration/metrics");
+
+    std::ofstream ofs(server_metrics_file, std::ios::app);
+    if (ofs.tellp() == 0) {
+        ofs << "timestamp,role,method,endpoint,client_id,type,file,payload_size,bytes_sent,bytes_received,latency_ms,http_code\n";
+    }
+}
+
+void log_server_metric(const std::string &method, const std::string &endpoint,
+                       const std::string &client_id, const std::string &type,
+                       const std::string &filepath, size_t payload_size,
+                       size_t bytes_sent, size_t bytes_received,
+                       long latency_ms, int http_code) {
+    auto now = std::chrono::system_clock::now();
+    std::time_t t = std::chrono::system_clock::to_time_t(now);
+    std::tm tm = *std::localtime(&t);
+
+    std::ofstream ofs(server_metrics_file, std::ios::app);
+    ofs << std::put_time(&tm, "%d-%m-%Y %H:%M") << ","
+        << "server," << method << "," << endpoint << ","
+        << client_id << "," << type << ","
+        << filepath << "," << payload_size << ","
+        << bytes_sent << "," << bytes_received << ","
+        << latency_ms << "," << http_code << "\n";
+}
+//==========================================
 
 using json = nlohmann::json;
 namespace fs = std::filesystem;
@@ -99,7 +133,10 @@ static void handle_sendPbKey(struct mg_connection *c, struct mg_http_message *hm
 }
 
 // Buffered multipart upload (pre-7.x compatible)
-static void handle_uploadPubKey(struct mg_connection *c, struct mg_http_message *hm, const std::string &dest_path) {
+static void handle_upload(struct mg_connection *c, struct mg_http_message *hm, const std::string &dest_path) {
+
+    auto start = std::chrono::high_resolution_clock::now();
+
     if (mg_vcmp(&hm->method, "POST") != 0) {
         mg_http_reply(c, 405, "", "Method not allowed\n");
         return;
@@ -116,19 +153,43 @@ static void handle_uploadPubKey(struct mg_connection *c, struct mg_http_message 
 
     struct mg_http_part part;
     size_t ofs = 0;
+    size_t total_bytes = 0;
+    std::string client_id = "-";
+    std::string type = "-";
+    
     while ((ofs = mg_http_next_multipart(hm->body, ofs, &part)) > 0) {
-        if (part.name.len > 0 && std::string(part.name.buf, part.name.len) == "file") {
+        std::string name(part.name.buf, part.name.len);
+        if (name == "file") {
             out.write(part.body.buf, part.body.len);
+            total_bytes += part.body.len;
+        } else if (name == "client_id") {
+            client_id = std::string(part.body.buf, part.body.len);
+        } else if (name == "type") {
+            type = std::string(part.body.buf, part.body.len);
         }
     }
     out.close();
 
-    std::cout << "[SERVER] Received and saved Public Key to " << dest_path << std::endl;
+    auto end = std::chrono::high_resolution_clock::now();
+    long latency_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    
+    std::cout << "[SERVER] Received "<<total_bytes<<" bytes, and saved Public Key to " << dest_path << std::endl;
     mg_http_reply(c, 200, "Content-Type: application/json\r\n", "{\"status\":\"received\"}");
+    
+    // Log metric
+    log_server_metric("POST", std::string(hm->uri.buf, hm->uri.len),
+                      client_id, type, dest_path,
+                      total_bytes,
+                      0,              // bytes_sent (server doesn’t send in POST)
+                      total_bytes,
+                      latency_ms, 200);
 }
 
 // Serve files from server/storage/<client>/<filename>
 static void handle_download(struct mg_connection *c, struct mg_http_message *hm, const ServerConfig &cfg) {
+    
+    auto start = std::chrono::high_resolution_clock::now();
+    
     std::string uri(hm->uri.buf, hm->uri.len);
     const std::string prefix = "/download/";
     std::string rel = uri.substr(prefix.size());
@@ -157,6 +218,19 @@ static void handle_download(struct mg_connection *c, struct mg_http_message *hm,
 
     std::cout << "[SERVER] Serving file " << target << " (" << body.size() << " bytes)" << std::endl;
     mg_http_reply(c, 200, hdr.str().c_str(), "%s", body.c_str());
+    
+    auto end = std::chrono::high_resolution_clock::now();
+    long latency_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    
+    std::cout << "[SERVER] Sent file " << target << " (" << body.size() << " bytes)" << std::endl; 
+    
+    // Log metric
+    log_server_metric("GET", std::string(hm->uri.buf, hm->uri.len),
+                      "-", "-", target.string(),
+                      body.size(),   // payload_size
+                      body.size(),   // bytes_sent
+                      0,             // bytes_received
+                      latency_ms, 200);
 }
 
 // --- Router ---
@@ -179,31 +253,31 @@ static void handle_request(struct mg_connection *c, int ev, void *ev_data, const
 
     // --- POST endpoints (uploads) ---
     } else if (is_uri_equal(hm->uri, "/uploadPubKeyC1") && mg_vcmp(&hm->method, "POST") == 0) {
-        handle_uploadPubKey(c, hm, cfg.pubkey_path_client1);
+        handle_upload(c, hm, cfg.pubkey_path_client1);
 
     } else if (is_uri_equal(hm->uri, "/uploadPubKeyC2") && mg_vcmp(&hm->method, "POST") == 0) {
-        handle_uploadPubKey(c, hm, cfg.pubkey_path_client2);
+        handle_upload(c, hm, cfg.pubkey_path_client2);
 
     } else if (is_uri_equal(hm->uri, "/uploadReKeyC1") && mg_vcmp(&hm->method, "POST") == 0) {
-        handle_uploadPubKey(c, hm, cfg.rekey_path_client1);
+        handle_upload(c, hm, cfg.rekey_path_client1);
 
     } else if (is_uri_equal(hm->uri, "/uploadReKeyC2") && mg_vcmp(&hm->method, "POST") == 0) {
-        handle_uploadPubKey(c, hm, cfg.rekey_path_client2);
+        handle_upload(c, hm, cfg.rekey_path_client2);
 
     } else if (is_uri_equal(hm->uri, "/uploadEncWeightsC1") && mg_vcmp(&hm->method, "POST") == 0) {
-        handle_uploadPubKey(c, hm, cfg.client_1_enc_w_p);
+        handle_upload(c, hm, cfg.client_1_enc_w_p);
 
     } else if (is_uri_equal(hm->uri, "/uploadEncWeightsC2") && mg_vcmp(&hm->method, "POST") == 0) {
-        handle_uploadPubKey(c, hm, cfg.client_2_enc_w_p);
+        handle_upload(c, hm, cfg.client_2_enc_w_p);
 
     } else if (is_uri_equal(hm->uri, "/uploadDomainChange") && mg_vcmp(&hm->method, "POST") == 0) {
-        handle_uploadPubKey(c, hm, cfg.output_domain_chg_p);
+        handle_upload(c, hm, cfg.output_domain_chg_p);
 
     } else if (is_uri_equal(hm->uri, "/uploadAggregated") && mg_vcmp(&hm->method, "POST") == 0) {
-        handle_uploadPubKey(c, hm, cfg.agg_w_p);
+        handle_upload(c, hm, cfg.agg_w_p);
 
     } else if (is_uri_equal(hm->uri, "/uploadDomainChangeAgg") && mg_vcmp(&hm->method, "POST") == 0) {
-        handle_uploadPubKey(c, hm, cfg.domain_chg_agg_w_p);
+        handle_upload(c, hm, cfg.domain_chg_agg_w_p);
 
     } else {
         mg_http_reply(c, 404, "", "Not found\n");
@@ -219,6 +293,7 @@ static void event_handler(struct mg_connection *c, int ev, void *ev_data) {
 // --- Main ---
 int main() {
     try {
+        init_server_metrics(); //Server-side metrics function call
         ServerConfig cfg = load_config("server/config/sConfig.json");
 
         struct mg_mgr mgr;
@@ -240,5 +315,6 @@ int main() {
         std::cerr << "[SERVER] ERROR: " << e.what() << std::endl;
         return 1;
     }
+    
     return 0;
 }

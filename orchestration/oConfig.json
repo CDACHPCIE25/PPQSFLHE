@@ -3,7 +3,7 @@
     "SERVER_IP": "127.0.0.1",
     "SERVER_PORT": 8000,
     "COMM_MODE": "MONGOOSE",
-    "ROUNDS": 3
+    "ROUNDS": 5
   },
   "client1": {
     "private_path": "client/storage/client_1/private",

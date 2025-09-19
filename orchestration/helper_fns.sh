@@ -1,6 +1,32 @@
 #!/bin/bash
-# =========
 # Helper Functions for PPFL, used by server/client/comm
+
+# =========
+# - lightweight communication metrics logging (CSV)
+# =========
+
+# If BASE_DIR is not set by the caller (run.sh sets it), try to infer it
+if [ -z "$BASE_DIR" ]; then
+  BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+fi
+
+
+# Metrics file (one CSV for client-side instrumentation)
+METRICS_DIR="$BASE_DIR/orchestration/metrics"
+METRICS_FILE="$METRICS_DIR/comm_metrics.csv"
+mkdir -p "$METRICS_DIR"
+
+# header: timestamp,role,method,endpoint,client_id,type,file,payload_size,bytes_sent,bytes_received,latency_ms,http_code
+
+if [ ! -s "$METRICS_FILE" ]; then
+  echo "timestamp,role,method,endpoint,client_id,type,file,payload_size,bytes_sent,bytes_received,latency_ms,http_code" > "$METRICS_FILE"
+fi
+
+# =========
+# msend: thin wrapper around curl for GET/POST used by comm layer
+# Usage:
+#   msend GET  <url> <output>
+#   msend POST <url> <output> <client_id> <type> <file>
 # =========
 
 # msend: thin wrapper around curl for GET/POST used by comm layer
@@ -11,14 +37,42 @@ msend() {
     local client_id=$4  # client id (optional, used in POST)
     local type=$5       # type of upload (pubkey, rekey, weights, etc.)
     local file=$6       # file path to send in POST
+    
+    # Extract endpoint for logging
+    local endpoint
+    endpoint="$(echo "$url" | sed -E 's|https?://[^/]+||')"
+    [ -z "$endpoint" ] && endpoint="/"
+
+    # Start timestamp
+    local start_ts=$(date +%s%3N)
+
+    local http_code=""
+    local rc=0
 
     if [ "$method" = "GET" ]; then
         echo "[helper_fns.sh] GET -> $url"
+        mkdir -p "$(dirname "$output")" 2>/dev/null || true
+
         for i in {1..5}; do
-            curl -f -s -S -o "$output" "$url" && break
+            http_code="$(curl -f -s -S -w "%{http_code}" -o "$output" "$url" 2>/dev/null)"
+            rc=$?
+            [ $rc -eq 0 ] && break
             echo "[helper_fns.sh] WARN: GET failed (attempt $i), retrying..."
             sleep 1
         done
+
+        local bytes_received=0
+        [ -f "$output" ] && bytes_received=$(stat -c%s "$output" 2>/dev/null || echo 0)
+
+        local end_ts=$(date +%s%3N)
+        local latency_ms=$((end_ts - start_ts))
+        local bytes_sent=512   # small request headers
+        local payload_size=0   # no upload payload
+
+        echo "$(date '+%Y-%m-%d %H:%M:%S'),client,GET,${endpoint},${client_id},${type},${output},${payload_size},${bytes_sent},${bytes_received},${latency_ms},${http_code}" \
+            >> "$METRICS_FILE"
+
+        [ $rc -ne 0 ] && { echo "[helper_fns.sh] ERROR: curl GET failed ($url)"; return 1; }
 
     elif [ "$method" = "POST" ]; then
         if [ -z "$file" ] || [ ! -f "$file" ]; then
@@ -27,15 +81,24 @@ msend() {
         fi
         echo "[helper_fns.sh] POST -> $url (client_id=$client_id, type=$type, file=$file)"
 
-        curl -s -X POST "$url" \
-             -F "file=@${file}" \
-             -F "client_id=${client_id}" \
-             -F "type=${type}" \
-             -o "$output"
-        if [ $? -ne 0 ]; then
-            echo "[helper_fns.sh] ERROR: curl POST failed ($url)"
-            return 1
-        fi
+        http_code="$(curl -s -S -w "%{http_code}" -o "$output" -X POST "$url" \
+            -F "file=@${file}" \
+            -F "client_id=${client_id}" \
+            -F "type=${type}" 2>/dev/null)"
+        rc=$?
+
+        local end_ts=$(date +%s%3N)
+        local latency_ms=$((end_ts - start_ts))
+
+        local payload_size=$(stat -c%s "$file" 2>/dev/null || echo 0)
+        local bytes_sent=$((payload_size + 1024)) # file + overhead
+        local bytes_received=0
+        [ -f "$output" ] && bytes_received=$(stat -c%s "$output" 2>/dev/null || echo 0)
+
+        echo "$(date '+%Y-%m-%d %H:%M:%S'),client,POST,${endpoint},${client_id},${type},${file},${payload_size},${bytes_sent},${bytes_received},${latency_ms},${http_code}" \
+            >> "$METRICS_FILE"
+
+        [ $rc -ne 0 ] && { echo "[helper_fns.sh] ERROR: curl POST failed ($url)"; return 1; }
 
     else
         echo "[helper_fns.sh] ERROR: Invalid msend method: $method"

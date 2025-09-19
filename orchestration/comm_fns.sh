@@ -28,15 +28,16 @@ comm_getCC() {
 # - POST via curl when in MONGOOSE mode
 # - cp otherwise
 comm_sendKey() {
-    local src=$1     # source file
-    local dest=$2    # destination (for cp mode only)
-    local desc=$3    # description (for logs)
+    local src=$1         # source file
+    local dest=$2        # destination (for cp mode only)
+    local desc=$3        # description (for logs)
     local client_id=$4
-    local endpoint=$5   # e.g., uploadPubKeyC1, uploadPubKeyC2
+    local endpoint=$5    # e.g., uploadPubKeyC1, uploadPubKeyC2
+    local type=$6        # NEW: pubkey, rekey, weights
 
     if [ "$COMM_MODE" = "MONGOOSE" ]; then
         local tmpout=$(mktemp)
-        msend POST "http://${SERVER_IP}:${SERVER_PORT}/${endpoint}" "$tmpout" "$client_id" "pubkey" "$src"
+        msend POST "http://${SERVER_IP}:${SERVER_PORT}/${endpoint}" "$tmpout" "$client_id" "$type" "$src"
         rm -f "$tmpout"
     else
         cp "$src" "$dest"
@@ -85,8 +86,8 @@ s_send_cc_to_c() {
 # --- Send client public keys to server ---
 c_send_pubkeys_to_s() {
     if [ "$COMM_MODE" = "MONGOOSE" ]; then
-        comm_sendKey "$CLIENT_1_PUBKEY" "" "Client 1 pubkey to server" 1 "uploadPubKeyC1"
-        comm_sendKey "$CLIENT_2_PUBKEY" "" "Client 2 pubkey to server" 2 "uploadPubKeyC2"
+        comm_sendKey "$CLIENT_1_PUBKEY" "" "Client 1 pubkey to server" 1 "uploadPubKeyC1" "pubkey"
+        comm_sendKey "$CLIENT_2_PUBKEY" "" "Client 2 pubkey to server" 2 "uploadPubKeyC2" "pubkey"
     else
         comm_sendKey "$CLIENT_1_PUBKEY" "$SERVER_STORAGE_DIR/client_1/client_1-public.key" "Client 1 pubkey to server"
         comm_sendKey "$CLIENT_2_PUBKEY" "$SERVER_STORAGE_DIR/client_2/client_2-public.key" "Client 2 pubkey to server"
@@ -110,8 +111,8 @@ s_send_pubkeys_to_c() {
 # --- Send client Rekeys to server ---
 c_Rekeys_to_s() {
     if [ "$COMM_MODE" = "MONGOOSE" ]; then
-        comm_sendKey "$CLIENT_1_REKEY" "" "Client 1 rekey to server" 1 "uploadReKeyC1"
-        comm_sendKey "$CLIENT_2_REKEY" "" "Client 2 rekey to server" 2 "uploadReKeyC2"
+        comm_sendKey "$CLIENT_1_REKEY" "" "Client 1 rekey to server" 1 "uploadReKeyC1" "rekey"
+        comm_sendKey "$CLIENT_2_REKEY" "" "Client 2 rekey to server" 2 "uploadReKeyC2" "rekey"
     else
         comm_sendKey "$CLIENT_1_REKEY" "$SERVER_STORAGE_DIR/client_1/client_1-ReKey.key" "Client 1 rekey to server"
         comm_sendKey "$CLIENT_2_REKEY" "$SERVER_STORAGE_DIR/client_2/client_2-ReKey.key" "Client 2 rekey to server"
@@ -121,8 +122,8 @@ c_Rekeys_to_s() {
 # Communicate encrypted weights from clients to server
 c_sends_encrypted_weights_to_s() {
     if [ "$COMM_MODE" = "MONGOOSE" ]; then
-        comm_sendKey "$CLIENT_1_ENCWEIGHTS" "" "Client 1 encrypted weights to server" 1 "uploadEncWeightsC1"
-        comm_sendKey "$CLIENT_2_ENCWEIGHTS" "" "Client 2 encrypted weights to server" 2 "uploadEncWeightsC2"
+        comm_sendKey "$CLIENT_1_ENCWEIGHTS" "" "Client 1 encrypted weights to server" 1 "uploadEncWeightsC1" "weights"
+        comm_sendKey "$CLIENT_2_ENCWEIGHTS" "" "Client 2 encrypted weights to server" 2 "uploadEncWeightsC2" "weights"
     else
         comm_sendKey "$CLIENT_1_ENCWEIGHTS" "$SERVER_STORAGE_DIR/client_1/encrypted_weights_c1.json" "Client 1 encrypted weights to server"
         comm_sendKey "$CLIENT_2_ENCWEIGHTS" "$SERVER_STORAGE_DIR/client_2/encrypted_weights_c2.json" "Client 2 encrypted weights to server"
